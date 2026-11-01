@@ -1,5 +1,17 @@
 # Sound Blaster AE-9 Linux driver — Audio Control Module, SBX effects, PipeWire
 
+> **Local Fedora development status:** first target is HD 650 headphone playback
+> through the AE-9 ACM. Both modules build on Fedora kernel
+> `7.2.13-200.fc44.x86_64`; hardware playback has **not** been tested here.
+> This tree disables ALSA capture PCM registration on both AE-9 codecs, including
+> direct ALSA access, rather than relying only on WirePlumber rules. Other cards
+> retain their capture paths. This does **not** fix or rule out initialization hangs.
+> Keep the existing boot blacklist until a reviewed installation and recovery plan
+> is ready. The support claims below describe the upstream author's testing.
+> See [our Fedora/Windows plan](docs/PROJECT-PLAN.md) and
+> [initial review](docs/FEDORA-XLR-REVIEW.md).
+> All documentation committed to this repository must be written in English.
+
 **Sound Blaster AE-9 Linux support: 44 % of the card's features, 71 % of the Audio Control
 Module's** (support matrix below). Working today on the physical card and ACM: headphone
 output through the Audio Control Module, ACM volume knob and dB display, mute and output

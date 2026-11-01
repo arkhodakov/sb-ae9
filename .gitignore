@@ -12,6 +12,8 @@ modules.order
 *.bak
 *.orig
 *.pre-*
+# Local firmware sources, private logs and raw captures (never publish this directory)
+/local/
 # never commit Creative's binaries or anything carved from them
 *.sys
 *.dll

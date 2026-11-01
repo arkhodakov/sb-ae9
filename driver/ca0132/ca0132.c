@@ -7564,9 +7564,20 @@ static const struct hda_pcm_stream ca0132_pcm_digital_capture = {
 	.channels_max = 2,
 };
 
+static bool ca0132_playback_only(struct hda_codec *codec)
+{
+	struct ca0132_spec *spec = codec->spec;
+
+	/* AE-9 capture is unsafe; its secondary codec uses QUIRK_ZXR_DBPRO. */
+	return ca0132_quirk(spec) == QUIRK_AE9 ||
+		codec->core.subsystem_id == 0x11020071 ||
+		codec->core.subsystem_id == 0x11020072;
+}
+
 static int ca0132_build_pcms(struct hda_codec *codec)
 {
 	struct ca0132_spec *spec = codec->spec;
+	bool capture = !ca0132_playback_only(codec);
 	struct hda_pcm *info;
 
 	info = snd_hda_codec_pcm_new(codec, "CA0132 Analog");
@@ -7581,12 +7592,14 @@ static int ca0132_build_pcms(struct hda_codec *codec)
 	info->stream[SNDRV_PCM_STREAM_PLAYBACK].nid = spec->dacs[0];
 	info->stream[SNDRV_PCM_STREAM_PLAYBACK].channels_max =
 		spec->multiout.max_channels;
-	info->stream[SNDRV_PCM_STREAM_CAPTURE] = ca0132_pcm_analog_capture;
-	info->stream[SNDRV_PCM_STREAM_CAPTURE].substreams = 1;
-	info->stream[SNDRV_PCM_STREAM_CAPTURE].nid = spec->adcs[0];
+	if (capture) {
+		info->stream[SNDRV_PCM_STREAM_CAPTURE] = ca0132_pcm_analog_capture;
+		info->stream[SNDRV_PCM_STREAM_CAPTURE].substreams = 1;
+		info->stream[SNDRV_PCM_STREAM_CAPTURE].nid = spec->adcs[0];
+	}
 
 	/* With the DSP enabled, desktops don't use this ADC. */
-	if (!ca0132_use_alt_functions(spec)) {
+	if (capture && !ca0132_use_alt_functions(spec)) {
 		info = snd_hda_codec_pcm_new(codec, "CA0132 Analog Mic-In2");
 		if (!info)
 			return -ENOMEM;
@@ -7596,14 +7609,16 @@ static int ca0132_build_pcms(struct hda_codec *codec)
 		info->stream[SNDRV_PCM_STREAM_CAPTURE].nid = spec->adcs[1];
 	}
 
-	info = snd_hda_codec_pcm_new(codec, "CA0132 What U Hear");
-	if (!info)
-		return -ENOMEM;
-	info->stream[SNDRV_PCM_STREAM_CAPTURE] = ca0132_pcm_analog_capture;
-	info->stream[SNDRV_PCM_STREAM_CAPTURE].substreams = 1;
-	info->stream[SNDRV_PCM_STREAM_CAPTURE].nid = spec->adcs[2];
+	if (capture) {
+		info = snd_hda_codec_pcm_new(codec, "CA0132 What U Hear");
+		if (!info)
+			return -ENOMEM;
+		info->stream[SNDRV_PCM_STREAM_CAPTURE] = ca0132_pcm_analog_capture;
+		info->stream[SNDRV_PCM_STREAM_CAPTURE].substreams = 1;
+		info->stream[SNDRV_PCM_STREAM_CAPTURE].nid = spec->adcs[2];
+	}
 
-	if (!spec->dig_out && !spec->dig_in)
+	if (!spec->dig_out && !(capture && spec->dig_in))
 		return 0;
 
 	info = snd_hda_codec_pcm_new(codec, "CA0132 Digital");
@@ -7615,7 +7630,7 @@ static int ca0132_build_pcms(struct hda_codec *codec)
 			ca0132_pcm_digital_playback;
 		info->stream[SNDRV_PCM_STREAM_PLAYBACK].nid = spec->dig_out;
 	}
-	if (spec->dig_in) {
+	if (capture && spec->dig_in) {
 		info->stream[SNDRV_PCM_STREAM_CAPTURE] =
 			ca0132_pcm_digital_capture;
 		info->stream[SNDRV_PCM_STREAM_CAPTURE].nid = spec->dig_in;
@@ -7627,17 +7642,19 @@ static int ca0132_build_pcms(struct hda_codec *codec)
 static int dbpro_build_pcms(struct hda_codec *codec)
 {
 	struct ca0132_spec *spec = codec->spec;
+	bool capture = !ca0132_playback_only(codec);
 	struct hda_pcm *info;
 
-	info = snd_hda_codec_pcm_new(codec, "CA0132 Alt Analog");
-	if (!info)
-		return -ENOMEM;
-	info->stream[SNDRV_PCM_STREAM_CAPTURE] = ca0132_pcm_analog_capture;
-	info->stream[SNDRV_PCM_STREAM_CAPTURE].substreams = 1;
-	info->stream[SNDRV_PCM_STREAM_CAPTURE].nid = spec->adcs[0];
+	if (capture) {
+		info = snd_hda_codec_pcm_new(codec, "CA0132 Alt Analog");
+		if (!info)
+			return -ENOMEM;
+		info->stream[SNDRV_PCM_STREAM_CAPTURE] = ca0132_pcm_analog_capture;
+		info->stream[SNDRV_PCM_STREAM_CAPTURE].substreams = 1;
+		info->stream[SNDRV_PCM_STREAM_CAPTURE].nid = spec->adcs[0];
+	}
 
-
-	if (!spec->dig_out && !spec->dig_in)
+	if (!spec->dig_out && !(capture && spec->dig_in))
 		return 0;
 
 	info = snd_hda_codec_pcm_new(codec, "CA0132 Digital");
@@ -7649,7 +7666,7 @@ static int dbpro_build_pcms(struct hda_codec *codec)
 			ca0132_pcm_digital_playback;
 		info->stream[SNDRV_PCM_STREAM_PLAYBACK].nid = spec->dig_out;
 	}
-	if (spec->dig_in) {
+	if (capture && spec->dig_in) {
 		info->stream[SNDRV_PCM_STREAM_CAPTURE] =
 			ca0132_pcm_digital_capture;
 		info->stream[SNDRV_PCM_STREAM_CAPTURE].nid = spec->dig_in;
